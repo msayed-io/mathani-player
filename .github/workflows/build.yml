@@ -1,0 +1,91 @@
+name: Build Mathani Windows Installer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows NSIS Setup (.exe)
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Mathani NSIS Installer (.exe)
+        run: npx tauri build --bundles nsis
+        env:
+          CI: "true"
+
+      - name: Prepare direct Setup.exe deliverable
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis/*-setup.exe" | Select-Object -First 1
+          if (-not $exe) {
+            Write-Error "NSIS setup .exe was not found!"
+            exit 1
+          }
+          Copy-Item $exe.FullName -Destination "Mathani-Setup.exe" -Force
+          $hash = (Get-FileHash "Mathani-Setup.exe" -Algorithm SHA256).Hash
+          $sizeMB = [math]::Round((Get-Item "Mathani-Setup.exe").Length / 1MB, 2)
+          Write-Host "Built Mathani-Setup.exe ($sizeMB MB) | SHA256: $hash"
+          "SHA256=$hash" >> $env:GITHUB_ENV
+          "SIZE_MB=$sizeMB" >> $env:GITHUB_ENV
+          "ORIG_EXE=$($exe.FullName)" >> $env:GITHUB_ENV
+
+      - name: Publish direct .exe to GitHub Releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v1.0.0"
+          NOTES=$(cat <<EOF
+          ## مَثَانِي (Mathani) v1.0.0 — مشغل القرآن الكريم لسطح مكتب ويندوز
+
+          مشغل قرآن كريم احترافي باللغة العربية مخصّص لتشغيل وتنظيم ملفات ومجلدات التلاوات المحلية على جهازك، مع تكامل فوري كامل مع **الجزيرة التفاعلية (Dynamic Island)** في أعلى شاشة ويندوز.
+
+          ### التثبيت المباشر (Windows 10 / 11 x64)
+          قم بتحميل ملف المثبّت المباشر **\`Mathani-Setup.exe\`** بالأسفل وتشغيله مباشرةً (ملف \`.exe\` مستقل بدون ضغط).
+
+          - **الحجم:** \`${SIZE_MB} MB\`
+          - **بصمة التحقق (SHA-256):** \`${SHA256}\`
+          EOF
+          )
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "Mathani-Setup.exe" "$ORIG_EXE" --clobber
+            gh release edit "$TAG" --title "مثاني (Mathani) v1.0.0" --notes "$NOTES"
+          else
+            gh release create "$TAG" "Mathani-Setup.exe" "$ORIG_EXE" \
+              --title "مثاني (Mathani) v1.0.0" \
+              --notes "$NOTES"
+          fi

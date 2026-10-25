@@ -1,0 +1,1133 @@
+:root {
+	--m-bg: var(--bloom-bg, rgba(12, 14, 18, 0.84));
+	--m-bg-expanded: var(--bloom-bg-expanded, rgba(16, 19, 24, 0.94));
+	--m-text: var(--bloom-text, #f7f8fa);
+	--m-muted: var(--bloom-text-muted, rgba(247, 248, 250, 0.58));
+	--m-border: var(--bloom-border, rgba(255, 255, 255, 0.1));
+	--m-group: var(--bloom-group-bg, rgba(255, 255, 255, 0.045));
+	--m-accent: var(--bloom-accent, #10b981);
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	background: transparent;
+	overflow: hidden;
+	user-select: none;
+	-webkit-user-select: none;
+	font-family: "Segoe UI Variable Display", "Segoe UI", Tahoma, system-ui, -apple-system, sans-serif;
+	color: var(--m-text);
+}
+
+.mathani-shell {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	background: var(--m-bg-expanded);
+	backdrop-filter: blur(30px) saturate(190%);
+	-webkit-backdrop-filter: blur(30px) saturate(190%);
+	border-radius: 14px;
+	border: 1px solid var(--m-border);
+	overflow: hidden;
+	position: relative;
+	isolation: isolate;
+}
+
+.mathani-shell.maximized {
+	border-radius: 0;
+	border: none;
+}
+
+.mathani-shell.drag-active::after {
+	content: "أفلت مجلدات أو ملفات القرآن الكريم هنا لإضافتها فوراً إلى المكتبة";
+	position: absolute;
+	inset: 12px;
+	border-radius: 14px;
+	border: 2px dashed var(--m-accent);
+	background: rgba(10, 14, 18, 0.86);
+	backdrop-filter: blur(14px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 18px;
+	font-weight: 700;
+	color: #ffffff;
+	z-index: 999;
+	pointer-events: none;
+}
+
+/* Ambient subtle top glow echoing Bloom's notch-ambient-glow */
+.mathani-ambient-backdrop {
+	position: absolute;
+	top: -120px;
+	left: 15%;
+	width: 70%;
+	height: 280px;
+	pointer-events: none;
+	z-index: -1;
+	opacity: 0.22;
+	filter: blur(75px) saturate(180%);
+	transition: opacity 0.5s ease;
+}
+
+.mathani-ambient-backdrop img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+/* Custom Bloom-inspired Titlebar */
+.m-titlebar {
+	height: 52px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 16px;
+	border-bottom: 1px solid var(--m-border);
+	flex-shrink: 0;
+	gap: 14px;
+	-webkit-app-region: drag;
+}
+
+.m-brand {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	pointer-events: none;
+	flex-shrink: 0;
+}
+
+.m-brand-logo {
+	width: 28px;
+	height: 28px;
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(212, 168, 83, 0.18));
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	color: #6ee7b7;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+.m-brand-text {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.15;
+}
+
+.m-brand-name {
+	font-size: 15px;
+	font-weight: 800;
+	letter-spacing: -0.2px;
+	color: var(--m-text);
+}
+
+.m-brand-sub {
+	font-size: 10.5px;
+	color: var(--m-muted);
+	font-weight: 500;
+}
+
+.m-island-status-pill {
+	-webkit-app-region: no-drag;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	background: var(--m-group);
+	border: 1px solid var(--m-border);
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--m-muted);
+	cursor: pointer;
+	transition: all 0.18s ease;
+}
+
+.m-island-status-pill:hover {
+	background: rgba(255, 255, 255, 0.09);
+	color: var(--m-text);
+}
+
+.m-island-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: #32d74b;
+	box-shadow: 0 0 8px rgba(50, 215, 75, 0.75);
+}
+
+.m-search-box {
+	-webkit-app-region: no-drag;
+	flex: 1;
+	max-width: 390px;
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.m-search-box input {
+	width: 100%;
+	height: 33px;
+	border-radius: 999px;
+	border: 1px solid var(--m-border);
+	background: var(--m-group);
+	color: var(--m-text);
+	padding: 0 34px 0 30px;
+	font-size: 12.5px;
+	font-family: inherit;
+	outline: none;
+	transition: all 0.18s ease;
+}
+
+.m-search-box input:focus {
+	border-color: color-mix(in srgb, var(--m-accent) 65%, transparent);
+	background: rgba(255, 255, 255, 0.075);
+}
+
+.m-search-box input::placeholder {
+	color: var(--m-muted);
+	opacity: 0.75;
+}
+
+.m-search-icon {
+	position: absolute;
+	right: 11px;
+	color: var(--m-muted);
+	pointer-events: none;
+}
+
+.m-search-clear {
+	position: absolute;
+	left: 8px;
+	width: 18px;
+	height: 18px;
+	border: none;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.1);
+	color: var(--m-text);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	padding: 0;
+}
+
+.m-win-actions {
+	-webkit-app-region: no-drag;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.m-island-min-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	height: 27px;
+	padding: 0 11px;
+	border-radius: 999px;
+	border: 1px solid var(--m-border);
+	background: var(--m-group);
+	color: var(--m-text);
+	font-size: 11px;
+	font-weight: 600;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.18s ease;
+}
+
+.m-island-min-btn:hover {
+	background: color-mix(in srgb, var(--m-accent) 20%, transparent);
+	border-color: color-mix(in srgb, var(--m-accent) 55%, transparent);
+}
+
+.m-win-btn {
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	border: none;
+	background: rgba(255, 255, 255, 0.07);
+	color: var(--m-text);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.light-mode .m-win-btn {
+	background: rgba(0, 0, 0, 0.06);
+}
+
+.m-win-btn:hover {
+	background: rgba(255, 255, 255, 0.16);
+	transform: scale(1.05);
+}
+
+.m-win-btn.close:hover {
+	background: #ff453a;
+	color: #ffffff;
+}
+
+/* Main Workspace Split */
+.m-workspace {
+	flex: 1;
+	display: flex;
+	min-height: 0;
+	overflow: hidden;
+}
+
+/* Sidebar (Bloom Settings sidebar aesthetic) */
+.m-sidebar {
+	width: 224px;
+	flex-shrink: 0;
+	border-left: 1px solid var(--m-border);
+	background: rgba(255, 255, 255, 0.015);
+	padding: 14px 10px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	gap: 10px;
+	overflow-y: auto;
+}
+
+.light-mode .m-sidebar {
+	background: rgba(0, 0, 0, 0.018);
+}
+
+.m-nav-group {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.m-nav-label {
+	font-size: 10.5px;
+	font-weight: 700;
+	color: var(--m-muted);
+	padding: 6px 10px 4px;
+	opacity: 0.72;
+}
+
+.m-nav-btn {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	width: 100%;
+	padding: 9px 11px;
+	border-radius: 9px;
+	border: none;
+	background: transparent;
+	color: var(--m-text);
+	font-size: 13px;
+	font-weight: 500;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.15s ease;
+	opacity: 0.8;
+	text-align: right;
+}
+
+.m-nav-btn-right {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.m-nav-btn:hover {
+	background: rgba(255, 255, 255, 0.055);
+	opacity: 1;
+}
+
+.light-mode .m-nav-btn:hover {
+	background: rgba(0, 0, 0, 0.045);
+}
+
+.m-nav-btn.active {
+	background: rgba(255, 255, 255, 0.095);
+	font-weight: 700;
+	opacity: 1;
+	box-shadow: inset -2.5px 0 0 var(--m-accent);
+}
+
+.light-mode .m-nav-btn.active {
+	background: rgba(0, 0, 0, 0.07);
+}
+
+.m-nav-badge {
+	font-size: 10.5px;
+	font-weight: 700;
+	padding: 1px 7px;
+	border-radius: 999px;
+	background: var(--m-group);
+	border: 1px solid var(--m-border);
+	color: var(--m-muted);
+}
+
+/* Sidebar Now-Playing Mini Card */
+.m-sidebar-card {
+	border-radius: 12px;
+	padding: 11px;
+	background: var(--m-group);
+	border: 1px solid var(--m-border);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.m-khatmah-bar {
+	width: 100%;
+	height: 5px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.08);
+	overflow: hidden;
+}
+
+.m-khatmah-fill {
+	height: 100%;
+	border-radius: 999px;
+	background: linear-gradient(90deg, var(--m-accent), #34d399);
+	transition: width 0.35s ease;
+}
+
+/* Main Content Area */
+.m-content {
+	flex: 1;
+	min-width: 0;
+	overflow-y: auto;
+	padding: 18px 22px 26px;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.m-content::-webkit-scrollbar {
+	width: 6px;
+}
+
+.m-content::-webkit-scrollbar-thumb {
+	background: var(--bloom-scrollbar-thumb, rgba(255, 255, 255, 0.12));
+	border-radius: 10px;
+}
+
+/* Hero Banner / Resume Card */
+.m-hero {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 18px;
+	padding: 18px 20px;
+	border-radius: 16px;
+	background: linear-gradient(
+		135deg,
+		color-mix(in srgb, var(--m-accent) 16%, rgba(255, 255, 255, 0.04)),
+		rgba(255, 255, 255, 0.025)
+	);
+	border: 1px solid var(--m-border);
+	position: relative;
+	overflow: hidden;
+}
+
+.m-hero-info {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	min-width: 0;
+}
+
+.m-hero-art {
+	width: 68px;
+	height: 68px;
+	border-radius: 14px;
+	overflow: hidden;
+	flex-shrink: 0;
+	box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.m-hero-art img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.m-hero-text {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.m-hero-eyebrow {
+	font-size: 11px;
+	font-weight: 700;
+	color: var(--m-accent);
+}
+
+.m-hero-title {
+	font-size: 20px;
+	font-weight: 800;
+	color: var(--m-text);
+	margin: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.m-hero-sub {
+	font-size: 12.5px;
+	color: var(--m-muted);
+}
+
+.m-hero-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+/* Primary & Pill Buttons (Bloom pill button DNA) */
+.m-btn-primary {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	height: 36px;
+	padding: 0 16px;
+	border-radius: 999px;
+	border: none;
+	background: var(--m-text);
+	color: #0b0d11;
+	font-size: 12.5px;
+	font-weight: 700;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+
+.light-mode .m-btn-primary {
+	background: #1c1c1e;
+	color: #ffffff;
+}
+
+.m-btn-primary:hover {
+	transform: translateY(-1px) scale(1.02);
+	opacity: 0.94;
+}
+
+.m-btn-secondary {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	height: 34px;
+	padding: 0 14px;
+	border-radius: 999px;
+	border: 1px solid var(--m-border);
+	background: var(--m-group);
+	color: var(--m-text);
+	font-size: 12px;
+	font-weight: 600;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.16s ease;
+}
+
+.m-btn-secondary:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+/* Filter Toolbar */
+.m-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.m-chips {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.m-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 5px 13px;
+	border-radius: 999px;
+	border: 1px solid var(--m-border);
+	background: var(--m-group);
+	color: var(--m-muted);
+	font-size: 12px;
+	font-weight: 600;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.m-chip:hover {
+	color: var(--m-text);
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.m-chip.active {
+	color: var(--m-text);
+	border-color: color-mix(in srgb, var(--m-accent) 70%, transparent);
+	background: color-mix(in srgb, var(--m-accent) 18%, transparent);
+}
+
+/* Surah Rows & Grid */
+.m-surah-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.m-surah-row {
+	display: grid;
+	grid-template-columns: 44px minmax(180px, 1.4fr) minmax(140px, 1fr) 120px 92px;
+	align-items: center;
+	gap: 12px;
+	padding: 9px 13px;
+	border-radius: 12px;
+	background: var(--m-group);
+	border: 1px solid transparent;
+	cursor: pointer;
+	transition: all 0.16s ease;
+}
+
+.m-surah-row:hover {
+	background: rgba(255, 255, 255, 0.075);
+	border-color: var(--m-border);
+}
+
+.light-mode .m-surah-row:hover {
+	background: rgba(0, 0, 0, 0.05);
+}
+
+.m-surah-row.playing {
+	background: color-mix(in srgb, var(--m-accent) 14%, var(--m-group));
+	border-color: color-mix(in srgb, var(--m-accent) 45%, transparent);
+}
+
+.m-surah-num {
+	width: 34px;
+	height: 34px;
+	border-radius: 9px;
+	background: rgba(255, 255, 255, 0.055);
+	border: 1px solid var(--m-border);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12.5px;
+	font-weight: 700;
+	color: var(--m-text);
+}
+
+.m-surah-row.playing .m-surah-num {
+	background: var(--m-accent);
+	color: #06130e;
+	border-color: transparent;
+}
+
+.m-surah-main {
+	display: flex;
+	align-items: center;
+	gap: 11px;
+	min-width: 0;
+}
+
+.m-surah-thumb {
+	width: 38px;
+	height: 38px;
+	border-radius: 9px;
+	object-fit: cover;
+	flex-shrink: 0;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.m-surah-titles {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.m-surah-name {
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--m-text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.m-surah-sub {
+	font-size: 11px;
+	color: var(--m-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.m-surah-reciter {
+	font-size: 12.5px;
+	color: var(--m-muted);
+	font-weight: 500;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.m-surah-badges {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.m-tag {
+	font-size: 10.5px;
+	font-weight: 600;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid var(--m-border);
+	color: var(--m-muted);
+}
+
+.m-tag.meccan {
+	color: #fcd34d;
+	background: rgba(245, 158, 11, 0.11);
+	border-color: rgba(245, 158, 11, 0.25);
+}
+
+.m-tag.medinan {
+	color: #6ee7b7;
+	background: rgba(16, 185, 129, 0.11);
+	border-color: rgba(16, 185, 129, 0.25);
+}
+
+.m-surah-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 4px;
+}
+
+.m-icon-btn {
+	width: 28px;
+	height: 28px;
+	border-radius: 8px;
+	border: none;
+	background: transparent;
+	color: var(--m-muted);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.m-icon-btn:hover {
+	background: rgba(255, 255, 255, 0.1);
+	color: var(--m-text);
+}
+
+.m-icon-btn.fav-active {
+	color: #fb7185;
+}
+
+/* Grid Cards (Reciters & Surah Grid) */
+.m-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+	gap: 12px;
+}
+
+.m-card {
+	border-radius: 14px;
+	padding: 14px;
+	background: var(--m-group);
+	border: 1px solid var(--m-border);
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	cursor: pointer;
+	transition: all 0.18s ease;
+}
+
+.m-card:hover {
+	transform: translateY(-2px);
+	background: rgba(255, 255, 255, 0.075);
+	box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+/* Empty State */
+.m-empty {
+	margin: auto 0;
+	padding: 38px 24px;
+	border-radius: 18px;
+	background: var(--m-group);
+	border: 1px dashed var(--m-border);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	gap: 12px;
+}
+
+.m-empty-icon {
+	width: 64px;
+	height: 64px;
+	border-radius: 18px;
+	background: color-mix(in srgb, var(--m-accent) 16%, transparent);
+	border: 1px solid color-mix(in srgb, var(--m-accent) 35%, transparent);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--m-accent);
+}
+
+/* Bottom Master Player Dock (inside Mathani Window — NOT desktop taskbar!) */
+.m-player-bar {
+	height: 92px;
+	flex-shrink: 0;
+	border-top: 1px solid var(--m-border);
+	background: rgba(0, 0, 0, 0.26);
+	backdrop-filter: blur(28px);
+	padding: 8px 20px 10px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	gap: 6px;
+}
+
+.light-mode .m-player-bar {
+	background: rgba(255, 255, 255, 0.55);
+}
+
+.m-progress-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	direction: ltr;
+}
+
+.m-time {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--m-muted);
+	font-variant-numeric: tabular-nums;
+	min-width: 42px;
+	text-align: center;
+}
+
+.m-seek-track {
+	flex: 1;
+	height: 5px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.14);
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.light-mode .m-seek-track {
+	background: rgba(0, 0, 0, 0.14);
+}
+
+.m-seek-fill {
+	height: 100%;
+	border-radius: 999px;
+	background: var(--m-text);
+	pointer-events: none;
+}
+
+.m-seek-ab {
+	position: absolute;
+	top: -1px;
+	bottom: -1px;
+	background: color-mix(in srgb, var(--m-accent) 55%, transparent);
+	border-left: 2px solid var(--m-accent);
+	border-right: 2px solid var(--m-accent);
+	border-radius: 3px;
+	pointer-events: none;
+}
+
+.m-seek-input {
+	position: absolute;
+	inset: -6px 0;
+	width: 100%;
+	opacity: 0;
+	cursor: pointer;
+	margin: 0;
+}
+
+.m-controls-row {
+	display: grid;
+	grid-template-columns: 1.2fr auto 1.2fr;
+	align-items: center;
+	gap: 16px;
+}
+
+.m-now-track {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+}
+
+.m-now-art {
+	width: 46px;
+	height: 46px;
+	border-radius: 10px;
+	overflow: hidden;
+	flex-shrink: 0;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--m-group);
+}
+
+.m-now-art img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.m-now-meta {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	gap: 2px;
+}
+
+.m-now-title {
+	font-size: 13.5px;
+	font-weight: 700;
+	color: var(--m-text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.m-now-reciter {
+	font-size: 11.5px;
+	color: var(--m-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Center Transport Buttons — Bloom's exact SF + slide-push aesthetic */
+.m-transport {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	direction: ltr;
+}
+
+.m-tbtn {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	border: none;
+	background: transparent;
+	color: var(--m-text);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.m-tbtn:hover {
+	background: rgba(255, 255, 255, 0.09);
+}
+
+.m-tbtn.active {
+	color: var(--m-accent);
+	background: color-mix(in srgb, var(--m-accent) 16%, transparent);
+}
+
+.m-play-circle {
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	border: none;
+	background: var(--m-text);
+	color: #0b0d11;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.light-mode .m-play-circle {
+	background: #1c1c1e;
+	color: #ffffff;
+}
+
+.m-slide-wrap {
+	position: relative;
+	width: 28px;
+	height: 20px;
+	overflow: hidden;
+}
+
+.m-slide-layer {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.m-right-tools {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+}
+
+.m-mini-pill {
+	height: 26px;
+	padding: 0 9px;
+	border-radius: 999px;
+	border: 1px solid var(--m-border);
+	background: var(--m-group);
+	color: var(--m-text);
+	font-size: 11px;
+	font-weight: 700;
+	font-family: inherit;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	transition: all 0.15s ease;
+}
+
+.m-mini-pill:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.m-mini-pill.active {
+	border-color: var(--m-accent);
+	color: var(--m-accent);
+	background: color-mix(in srgb, var(--m-accent) 14%, transparent);
+}
+
+.m-vol-wrap {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	direction: ltr;
+}
+
+.m-vol-slider {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 78px;
+	height: 4px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.16);
+	outline: none;
+	cursor: pointer;
+}
+
+.light-mode .m-vol-slider {
+	background: rgba(0, 0, 0, 0.16);
+}
+
+.m-vol-slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: var(--m-text);
+	cursor: pointer;
+}
+
+/* Section Panels (Settings / Memorization / Bookmarks inside Mathani) */
+.m-panel-card {
+	border-radius: 14px;
+	background: var(--m-group);
+	border: 1px solid var(--m-border);
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.m-panel-title {
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--m-text);
+	margin: 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.m-swatch-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.m-swatch {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	padding: 6px 12px;
+	border-radius: 999px;
+	border: 1px solid var(--m-border);
+	background: rgba(255, 255, 255, 0.04);
+	color: var(--m-text);
+	font-size: 12px;
+	font-weight: 600;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.m-swatch.active {
+	border-color: var(--m-text);
+	background: rgba(255, 255, 255, 0.12);
+}
+
+.m-swatch-dot {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+}
+
+@media (max-width: 960px) {
+	.m-surah-row {
+		grid-template-columns: 38px 1.4fr 1fr 76px;
+	}
+	.m-surah-badges {
+		display: none;
+	}
+}
