@@ -30,7 +30,7 @@ import {
 	Play
 } from "lucide-react";
 import { initTheme } from "./theme";
-import { useSettings, NotchTab, AppearanceTab, GeneralTab } from "./settings";
+import { useSettings, NotchTab, AppearanceTab, GeneralTab } from "./settings/index";
 import {
 	PlayIcon,
 	PauseIcon,
