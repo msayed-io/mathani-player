@@ -1,44 +1,59 @@
-name: Build Mathani Windows Installer
+name: Build and Release Mathani Windows Installer
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Publish direct Mathani-Setup.exe to GitHub Releases"
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
-  group: build-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build-windows:
-    name: Build Windows NSIS Setup (.exe)
-    runs-on: windows-latest
+  build:
+    name: Build Windows x64 NSIS Installer
+    runs-on: windows-2025
     timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      sha256: ${{ steps.package.outputs.sha256 }}
+      size_mb: ${{ steps.package.outputs.size_mb }}
+      orig_name: ${{ steps.package.outputs.orig_name }}
+      artifact_name: ${{ steps.package.outputs.artifact_name }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
 
-      - name: Install Rust stable toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust stable toolchain (x86_64-pc-windows-msvc)
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           targets: x86_64-pc-windows-msvc
 
       - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: src-tauri
           cache-on-failure: "true"
 
-      - name: Install frontend dependencies (native Windows bindings)
+      - name: Install frontend dependencies
         run: npm install
 
       - name: Build Mathani NSIS Installer (.exe)
@@ -46,46 +61,111 @@ jobs:
         env:
           CI: "true"
 
-      - name: Prepare direct Setup.exe deliverable
+      - name: Verify and stage NSIS Setup (.exe)
+        id: package
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           $exe = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis/*-setup.exe" | Select-Object -First 1
           if (-not $exe) {
-            Write-Error "NSIS setup .exe was not found!"
-            exit 1
+            throw "NSIS setup .exe was not found under src-tauri/target/release/bundle/nsis/"
           }
-          Copy-Item $exe.FullName -Destination "Mathani-Setup.exe" -Force
-          $hash = (Get-FileHash "Mathani-Setup.exe" -Algorithm SHA256).Hash
-          $sizeMB = [math]::Round((Get-Item "Mathani-Setup.exe").Length / 1MB, 2)
-          Write-Host "Built Mathani-Setup.exe ($sizeMB MB) | SHA256: $hash"
-          "SHA256=$hash" >> $env:GITHUB_ENV
-          "SIZE_MB=$sizeMB" >> $env:GITHUB_ENV
-          "ORIG_EXE=$($exe.FullName)" >> $env:GITHUB_ENV
 
-      - name: Publish direct .exe to GitHub Releases
-        shell: bash
+          New-Item -ItemType Directory -Force -Path "release-dist" | Out-Null
+          Copy-Item -LiteralPath $exe.FullName -Destination "release-dist/Mathani-Setup.exe" -Force
+          Copy-Item -LiteralPath $exe.FullName -Destination ("release-dist/" + $exe.Name) -Force
+
+          $hash = (Get-FileHash -LiteralPath "release-dist/Mathani-Setup.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sizeMB = [math]::Round((Get-Item -LiteralPath "release-dist/Mathani-Setup.exe").Length / 1MB, 2)
+          $artifactName = "mathani-windows-x64-nsis-v1.0.0"
+
+          Write-Host "Verified Mathani-Setup.exe ($sizeMB MB) | SHA-256: $hash"
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "sha256=$hash"
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "size_mb=$sizeMB"
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value ("orig_name=" + $exe.Name)
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "artifact_name=$artifactName"
+
+      - name: Upload Windows NSIS Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.package.outputs.artifact_name }}
+          path: release-dist/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish Direct .exe to GitHub Releases
+    needs: build
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && inputs.publish_release))
+    runs-on: windows-2025
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download verified NSIS Artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: verified-release
+
+      - name: Verify SHA-256 digest and publish GitHub Release
+        shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_SHA256: ${{ needs.build.outputs.sha256 }}
+          SIZE_MB: ${{ needs.build.outputs.size_mb }}
+          ORIG_NAME: ${{ needs.build.outputs.orig_name }}
+          REPO_SLUG: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
-          TAG="v1.0.0"
-          NOTES=$(cat <<EOF
-          ## مَثَانِي (Mathani) v1.0.0 — مشغل القرآن الكريم لسطح مكتب ويندوز
+          $ErrorActionPreference = "Stop"
+          $setupPath = Join-Path "verified-release" "Mathani-Setup.exe"
+          $origPath  = Join-Path "verified-release" $env:ORIG_NAME
 
-          مشغل قرآن كريم احترافي باللغة العربية مخصّص لتشغيل وتنظيم ملفات ومجلدات التلاوات المحلية على جهازك، مع تكامل فوري كامل مع **الجزيرة التفاعلية (Dynamic Island)** في أعلى شاشة ويندوز.
+          if (-not (Test-Path -LiteralPath $setupPath)) {
+            throw "Downloaded Mathani-Setup.exe is missing!"
+          }
 
-          ### التثبيت المباشر (Windows 10 / 11 x64)
-          قم بتحميل ملف المثبّت المباشر **\`Mathani-Setup.exe\`** بالأسفل وتشغيله مباشرةً (ملف \`.exe\` مستقل بدون ضغط).
+          $actualHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $env:EXPECTED_SHA256.ToLowerInvariant()) {
+            throw "SHA-256 mismatch! Expected $($env:EXPECTED_SHA256), got $actualHash"
+          }
+          Write-Host "Artifact integrity verified: $actualHash"
 
-          - **الحجم:** \`${SIZE_MB} MB\`
-          - **بصمة التحقق (SHA-256):** \`${SHA256}\`
-          EOF
+          $notesPath = Join-Path $env:RUNNER_TEMP "mathani-release-notes.md"
+          $lines = @(
+            "## مَثَانِي (Mathani) v1.0.0 — مشغل القرآن الكريم لسطح مكتب ويندوز",
+            "",
+            "مشغل قرآن كريم احترافي باللغة العربية مخصّص لتشغيل وتنظيم ملفات ومجلدات التلاوات المحلية على جهازك، مع تكامل فوري كامل مع **الجزيرة التفاعلية (Dynamic Island)** في أعلى شاشة ويندوز دون المساس بشريط مهام ويندوز الأصلي.",
+            "",
+            "### التثبيت المباشر (Windows 10 / 11 x64)",
+            "قم بتحميل ملف المثبّت المباشر **`Mathani-Setup.exe`** بالأسفل وتشغيله مباشرةً (ملف `.exe` مستقل بدون ضغط `.zip`).",
+            "",
+            "- **الحجم:** ``$($env:SIZE_MB) MB``",
+            "- **بصمة التحقق (SHA-256):** ``$actualHash``",
+            "- **الالتزام (Commit):** ``$($env:COMMIT_SHA)``"
           )
+          [System.IO.File]::WriteAllLines($notesPath, $lines, [System.Text.UTF8Encoding]::new($false))
 
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "Mathani-Setup.exe" "$ORIG_EXE" --clobber
-            gh release edit "$TAG" --title "مثاني (Mathani) v1.0.0" --notes "$NOTES"
-          else
-            gh release create "$TAG" "Mathani-Setup.exe" "$ORIG_EXE" \
-              --title "مثاني (Mathani) v1.0.0" \
-              --notes "$NOTES"
-          fi
+          $tag = "v1.0.0"
+          $filesToUpload = @($setupPath)
+          if ((Test-Path -LiteralPath $origPath) -and ($origPath -ne $setupPath)) {
+            $filesToUpload += $origPath
+          }
+
+          gh release view $tag --repo $env:REPO_SLUG *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag @filesToUpload --clobber --repo $env:REPO_SLUG
+            if ($LASTEXITCODE -ne 0) { throw "gh release upload failed" }
+            gh release edit $tag --repo $env:REPO_SLUG --title "مثاني (Mathani) v1.0.0" --notes-file $notesPath
+            if ($LASTEXITCODE -ne 0) { throw "gh release edit failed" }
+          } else {
+            gh release create $tag @filesToUpload --repo $env:REPO_SLUG --title "مثاني (Mathani) v1.0.0" --notes-file $notesPath
+            if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
+          }
+
+          Remove-Item -LiteralPath $notesPath -Force -ErrorAction SilentlyContinue

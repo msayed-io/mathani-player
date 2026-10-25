@@ -1094,14 +1094,6 @@ pub fn setup_system_worker(app_handle: AppHandle) -> Sender<SystemCommand> {
                                     if is_primary && (current_is_fs || is_maximized) {
                                         should_notch_overlap = true;
                                     } else if is_primary {
-                                                        if let Some(span) = overlap_span {
-                                            should_overlap = window_reaches_dock(
-                                                span,
-                                                (rect.left, rect.right, rect.bottom),
-                                                screen_rect.bottom - (56.0 * cached_scale) as i32,
-                                            );
-                                        }
-
                                         if let Ok(notch_rect_lock) = NOTCH_RECT.lock() {
                                             if let Some(nr) = *notch_rect_lock {
                                                 let scale = cached_scale;
