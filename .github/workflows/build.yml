@@ -26,7 +26,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
 
       - name: Install Rust stable toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -37,9 +36,10 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          save-if: true
 
-      - name: Install frontend dependencies
-        run: npm ci
+      - name: Install frontend dependencies (native Windows bindings)
+        run: npm install
 
       - name: Build Mathani NSIS Installer (.exe)
         run: npx tauri build --bundles nsis

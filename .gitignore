@@ -28,3 +28,4 @@ dist-ssr
 *.key.pub
 src-tauri/target
 src-tauri/gen/schemas
+/package-lock.json
